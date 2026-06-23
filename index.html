@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>四象限待辦工具</title>
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --card: #ffffff;
+      --border: #d8e0ea;
+      --text: #1f2937;
+      --primary: #2563eb;
+      --muted: #6b7280;
+      --danger: #ef4444;
+      font-family: "Noto Sans TC", "Segoe UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: linear-gradient(180deg, #eef4ff 0%, #f7fafc 100%);
+      color: var(--text);
+      display: flex;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .container {
+      width: min(1200px, 100%);
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: clamp(2rem, 2.8vw, 3rem);
+      letter-spacing: -0.03em;
+    }
+
+    header p {
+      margin: 12px auto 0;
+      max-width: 700px;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    .toolbar {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: 1fr auto;
+      align-items: end;
+      margin-bottom: 24px;
+      background: var(--card);
+      padding: 20px;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      box-shadow: 0 20px 70px rgba(15, 23, 42, 0.06);
+    }
+
+    .toolbar label {
+      display: grid;
+      gap: 10px;
+      margin: 0;
+    }
+
+    .toolbar input,
+    .toolbar select,
+    .toolbar button {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 14px;
+      font-size: 1rem;
+      outline: none;
+      transition: border-color 0.2s ease, transform 0.2s ease;
+    }
+
+    .toolbar input:focus,
+    .toolbar select:focus,
+    .toolbar button:focus {
+      border-color: var(--primary);
+      transform: translateY(-1px);
+    }
+
+    .toolbar button {
+      background: var(--primary);
+      color: white;
+      border-color: transparent;
+      cursor: pointer;
+    }
+
+    .toolbar button:hover {
+      background: #1d4ed8;
+    }
+
+    .grid {
+      display: grid;
+      gap: 20px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .quadrant {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      min-height: 280px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 15px 45px rgba(15, 23, 42, 0.06);
+    }
+
+    .quadrant__header {
+      padding: 20px;
+      background: #f8fbff;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .quadrant__header h2 {
+      margin: 0 0 8px;
+      font-size: 1.1rem;
+    }
+
+    .quadrant__header p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.95rem;
+      line-height: 1.6;
+    }
+
+    .task-list {
+      flex: 1;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      overflow-y: auto;
+    }
+
+    .task {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 14px;
+      border-radius: 14px;
+      background: #f9fbff;
+      border: 1px solid transparent;
+      transition: background 0.2s ease, border-color 0.2s ease;
+    }
+
+    .task:hover {
+      background: #eef4ff;
+      border-color: var(--border);
+    }
+
+    .task__text {
+      margin: 0;
+      font-size: 0.98rem;
+      line-height: 1.5;
+      color: var(--text);
+      word-break: break-word;
+    }
+
+    .task__remove {
+      border: none;
+      background: transparent;
+      color: var(--danger);
+      font-size: 1.2rem;
+      cursor: pointer;
+      padding: 0 6px;
+      line-height: 1;
+    }
+
+    .quadrant--important-urgent {
+      border-top: 4px solid #ef4444;
+    }
+
+    .quadrant--important-noturgent {
+      border-top: 4px solid #2563eb;
+    }
+
+    .quadrant--notimportant-urgent {
+      border-top: 4px solid #f59e0b;
+    }
+
+    .quadrant--notimportant-noturgent {
+      border-top: 4px solid #10b981;
+    }
+
+    .empty-state {
+      padding: 24px;
+      text-align: center;
+      color: var(--muted);
+      border-radius: 18px;
+      background: #f8fafc;
+      border: 1px dashed var(--border);
+      margin-top: auto;
+    }
+
+    @media (max-width: 860px) {
+      .toolbar {
+        grid-template-columns: 1fr;
+      }
+
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>四象限一天待辦清單</h1>
+      <p>將任務分類為「重要且緊急」「重要但不緊急」「不重要但緊急」「不緊急且不重要」，快速管理今天的待做事項。</p>
+    </header>
+
+    <section class="toolbar" aria-label="新增任務">
+      <label>
+        <span>任務內容</span>
+        <input id="taskInput" type="text" placeholder="輸入今天要完成的任務..." />
+      </label>
+      <label>
+        <span>任務類別</span>
+        <select id="categorySelect">
+          <option value="importantUrgent">重要且緊急</option>
+          <option value="importantNotUrgent">重要但不緊急</option>
+          <option value="notImportantUrgent">不重要但緊急</option>
+          <option value="notImportantNotUrgent">不緊急且不重要</option>
+        </select>
+      </label>
+      <button id="addTaskBtn" type="button">加入任務</button>
+    </section>
+
+    <main class="grid">
+      <article class="quadrant quadrant--important-urgent" data-category="importantUrgent">
+        <div class="quadrant__header">
+          <h2>重要且緊急</h2>
+          <p>立刻處理、不可拖延。</p>
+        </div>
+        <div class="task-list" id="importantUrgent"></div>
+      </article>
+
+      <article class="quadrant quadrant--important-noturgent" data-category="importantNotUrgent">
+        <div class="quadrant__header">
+          <h2>重要但不緊急</h2>
+          <p>計畫安排、穩定執行。</p>
+        </div>
+        <div class="task-list" id="importantNotUrgent"></div>
+      </article>
+
+      <article class="quadrant quadrant--notimportant-urgent" data-category="notImportantUrgent">
+        <div class="quadrant__header">
+          <h2>不重要但緊急</h2>
+          <p>快速處理，避免分心。</p>
+        </div>
+        <div class="task-list" id="notImportantUrgent"></div>
+      </article>
+
+      <article class="quadrant quadrant--notimportant-noturgent" data-category="notImportantNotUrgent">
+        <div class="quadrant__header">
+          <h2>不緊急且不重要</h2>
+          <p>可稍後做，或留給休息時間。</p>
+        </div>
+        <div class="task-list" id="notImportantNotUrgent"></div>
+      </article>
+    </main>
+  </div>
+
+  <script>
+    const categories = [
+      'importantUrgent',
+      'importantNotUrgent',
+      'notImportantUrgent',
+      'notImportantNotUrgent'
+    ];
+
+    const taskInput = document.getElementById('taskInput');
+    const categorySelect = document.getElementById('categorySelect');
+    const addTaskBtn = document.getElementById('addTaskBtn');
+
+    function getTasks() {
+      const json = localStorage.getItem('quadrantTasks');
+      return json ? JSON.parse(json) : {
+        importantUrgent: [],
+        importantNotUrgent: [],
+        notImportantUrgent: [],
+        notImportantNotUrgent: []
+      };
+    }
+
+    function saveTasks(tasks) {
+      localStorage.setItem('quadrantTasks', JSON.stringify(tasks));
+    }
+
+    function createTaskElement(text, category, index) {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'task';
+
+      const taskText = document.createElement('p');
+      taskText.className = 'task__text';
+      taskText.textContent = text;
+
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'task__remove';
+      removeBtn.type = 'button';
+      removeBtn.title = '刪除任務';
+      removeBtn.textContent = '✕';
+      removeBtn.addEventListener('click', () => {
+        removeTask(category, index);
+      });
+
+      wrapper.append(taskText, removeBtn);
+      return wrapper;
+    }
+
+    function renderTasks() {
+      const tasks = getTasks();
+
+      categories.forEach(category => {
+        const list = document.getElementById(category);
+        list.innerHTML = '';
+
+        if (tasks[category].length === 0) {
+          const empty = document.createElement('div');
+          empty.className = 'empty-state';
+          empty.textContent = '目前沒有任務，新增後會顯示在這裡。';
+          list.appendChild(empty);
+          return;
+        }
+
+        tasks[category].forEach((text, index) => {
+          list.appendChild(createTaskElement(text, category, index));
+        });
+      });
+    }
+
+    function addTask() {
+      const text = taskInput.value.trim();
+      const category = categorySelect.value;
+
+      if (!text) {
+        taskInput.focus();
+        return;
+      }
+
+      const tasks = getTasks();
+      tasks[category].push(text);
+      saveTasks(tasks);
+      taskInput.value = '';
+      renderTasks();
+      taskInput.focus();
+    }
+
+    function removeTask(category, index) {
+      const tasks = getTasks();
+      tasks[category].splice(index, 1);
+      saveTasks(tasks);
+      renderTasks();
+    }
+
+    addTaskBtn.addEventListener('click', addTask);
+    taskInput.addEventListener('keydown', event => {
+      if (event.key === 'Enter') addTask();
+    });
+
+    renderTasks();
+  </script>
+</body>
+</html>
